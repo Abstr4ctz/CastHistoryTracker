@@ -6,6 +6,7 @@
 ## SavedVariablesPerCharacter: CastHistoryTrackerDB
 
 libs\AceLibrary\AceLibrary.lua
+libs\AceOO-2.0\AceOO-2.0.lua
 libs\AceAddon-2.0\AceAddon-2.0.lua
 libs\AceDB-2.0\AceDB-2.0.lua
 libs\AceEvent-2.0\AceEvent-2.0.lua

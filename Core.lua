@@ -48,6 +48,7 @@ for _, unit in pairs(CastHistoryTracker.TRACKED_UNITS) do
 end
 
 CastHistoryTracker.spellHistory = {}         -- History of cast spells
+CastHistoryTracker.framePool = {}            -- Frame recycling
 CastHistoryTracker.uniqueSpellIDs = {}        -- Tracks unique spell IDs for spell history display
 CastHistoryTracker.activeSimpleSpellFilters = {} -- Active simple spell filter list
 CastHistoryTracker.activeAdvancedPlayerFilters = {} -- Active advanced filters for player

@@ -50,6 +50,7 @@ function CastHistoryTracker:UpdateAllSettings()
     self.db.profile.fadeTime     = self.db.profile.fadeTime or CastHistoryTracker.DEFAULT_FADE_TIME
     self.db.profile.moveDuration = self.db.profile.moveDuration or CastHistoryTracker.DEFAULT_MOVE_DURATION
     self:UpdateAnchorFrameSizes()
+	self:UpdateFrameAnimationSettings()
 end
 
 
@@ -58,7 +59,20 @@ function CastHistoryTracker:UpdateSetting(setting, newValue)
     if newValue then
         self.db.profile[setting] = newValue
         DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "[CastHistoryTracker]: " .. CastHistoryTracker.COLOR_DESCRIPTION .. setting .. CastHistoryTracker.COLOR_COMMAND .. " set to " .. CastHistoryTracker.COLOR_VALUE .. tostring(newValue) .. "|r")
+        if setting == "fadeTime" or setting == "moveDuration" then
+            self:UpdateFrameAnimationSettings()
+        end
     end
+end
+
+----------------------------------------------------
+-- Cache Update Function
+----------------------------------------------------
+function CastHistoryTracker:UpdateFrameAnimationSettings()
+    -- Updates the cached fadeTime and moveDuration from the profile.
+    self.fadeTimeCache = self.db.profile.fadeTime
+    self.moveDurationCache = self.db.profile.moveDuration
+    self:Debug(self.COLOR_DEBUG .. "[UpdateFrameAnimationSettings]: Cached fadeTime: " .. tostring(self.fadeTimeCache) .. ", moveDuration: " .. tostring(self.moveDurationCache))
 end
 
 

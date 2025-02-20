@@ -131,7 +131,7 @@ function CastHistoryTracker:CreateAnchorFrame(unit)
     anchor.label = label
     anchor.unit = unit
 
-    anchor:EnableMouse(true)
+    anchor:EnableMouse(false)
     anchor:SetMovable(true)
     anchor:RegisterForDrag("LeftButton")
 
@@ -152,6 +152,7 @@ function CastHistoryTracker:CreateAnchorFrame(unit)
     anchor:SetScript("OnDragStop", stopMoving)
 
     CastHistoryTracker.anchorFrames[unit] = anchor
+	self:UpdateAnchorFrameMouseEnabled(unit)
     self:UpdateAnchorVisibility(unit)
     self:Debug("[CreateAnchorFrame] Anchor frame created for " .. unit)
 end
@@ -170,6 +171,7 @@ function CastHistoryTracker:ToggleAnchorLock()
     self.db.profile.locked = not self.db.profile.locked
     self:Debug("[ToggleAnchorLock] Toggling anchor lock to " .. tostring(self.db.profile.locked))
     for unit in pairs(CastHistoryTracker.anchorFrames) do
+	    self:UpdateAnchorFrameMouseEnabled(unit)
         self:UpdateAnchorVisibility(unit)
     end
 end
@@ -196,6 +198,14 @@ function CastHistoryTracker:UpdateAnchorVisibility(unit)
             label:SetText(unit)
             label:Show()
         end
+    end
+end
+
+function CastHistoryTracker:UpdateAnchorFrameMouseEnabled(unit)
+    -- Updates the mouse enabled state of an anchor frame based on lock status.
+    local anchor = CastHistoryTracker.anchorFrames[unit]
+    if anchor then
+        anchor:EnableMouse(not self.db.profile.locked) -- Enable mouse only if not locked
     end
 end
 

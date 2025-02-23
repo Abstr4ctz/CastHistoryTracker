@@ -39,12 +39,21 @@ CastHistoryTracker.TRACKED_UNITS = {
     "focus1", "focus2", "focus3", "focus4", "focus5"
 }
 
+-- Add a table for valid directions
+CastHistoryTracker.VALID_DIRECTIONS = {
+    ["top"] = true,
+    ["bottom"] = true,
+    ["left"] = true,
+    ["right"] = true,
+}
+
 -- Initializes tables to hold addon data
 CastHistoryTracker.frames = {}             -- Frames for spell icons
 CastHistoryTracker.trackedUnitGUIDs = {}   -- GUIDs of tracked units
+CastHistoryTracker.frameOrientations = {} -- Cache for frame orientations
 for _, unit in pairs(CastHistoryTracker.TRACKED_UNITS) do
-	CastHistoryTracker.frames[unit] = {}    -- Initialize frame table for each unit
-	CastHistoryTracker.trackedUnitGUIDs[unit] = nil -- Initialize GUID tracking for each unit
+    CastHistoryTracker.frames[unit] = {}    -- Initialize frame table for each unit
+    CastHistoryTracker.trackedUnitGUIDs[unit] = nil -- Initialize GUID tracking for each unit
 end
 
 CastHistoryTracker.spellHistory = {}         -- History of cast spells
@@ -55,6 +64,7 @@ CastHistoryTracker.activeAdvancedPlayerFilters = {} -- Active advanced filters f
 CastHistoryTracker.activeAdvancedTargetFilters = {} -- Active advanced filters for target
 CastHistoryTracker.activeAdvancedPartyFilters = {}  -- Active advanced filters for party
 CastHistoryTracker.activeAdvancedFocusFilters = {}  -- Active advanced filters for focus
+CastHistoryTracker.customSpellIcons = {}            -- Custom Spell Icons table
 
 ----------------------------------------------------
 -- Addon Lifecycle Functions
@@ -100,6 +110,8 @@ function CastHistoryTracker:OnInitialize()
         SimpleWhitelist = {},
         AdvancedBlacklist = { player = {}, target = {}, party = {}, focus = {} },
         AdvancedWhitelist = { player = {}, target = {}, party = {}, focus = {} },
+		customSpellIcons = {},
+        frameOrientations = {},
         UnitFilterTypes = { player = "Blacklist", target = "Blacklist", party = "Blacklist", focus = "Blacklist" }
     })
 
@@ -137,6 +149,12 @@ function CastHistoryTracker:OnEnable()
         self:LoadActiveFiltersForAdvancedMode()
     end
     self.currentFilterMode = self.db.profile.filterMode -- Remember Active Filter
+	
+	-- Load Custom Spell Icons from DB to cache
+    self:LoadCustomSpellIcons()
+
+    -- Load frame orientations from DB to cache
+    self:LoadFrameOrientations()
 
     if self.trackedUnitGUIDs["player"] then
         self:Debug(self.COLOR_SYSTEM .. "[CastHistoryTracker]: Player GUID " .. self.trackedUnitGUIDs["player"])

@@ -62,8 +62,8 @@ SlashCmdList["CHT"] = function(msg)
         DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "/cht lock " .. CastHistoryTracker.COLOR_DESCRIPTION .. "- Toggle anchor lock.|r")
         DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "/cht focus " .. CastHistoryTracker.COLOR_VALUE .. "<1-5> " .. CastHistoryTracker.COLOR_DESCRIPTION .. "- Set/Clear focus target.|r")
         DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "/cht clear " .. CastHistoryTracker.COLOR_DESCRIPTION .. "- Clear all focuses.|r")
-        DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "/cht reset " .. CastHistoryTracker.COLOR_DESCRIPTION .. "- Reset anchor positions.|r")
 		DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "/cht show " .. CastHistoryTracker.COLOR_VALUE .. "<player|target|party> " .. CastHistoryTracker.COLOR_DESCRIPTION .. "- Toggle unit frame visibility.|r")
+        DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "/cht direction " .. CastHistoryTracker.COLOR_VALUE .. "<player|target|party(1-4)|focus(1-5)> <top/bottom/left/right> " .. CastHistoryTracker.COLOR_DESCRIPTION .. "- Set frame orientation.|r")
 		DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "/cht config " .. CastHistoryTracker.COLOR_DESCRIPTION .. "- Show/Hide config GUI.|r")
 	end
 
@@ -75,6 +75,20 @@ SlashCmdList["CHT"] = function(msg)
 		DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "Party:|r " .. (self.db.profile.showParty and CastHistoryTracker.COLOR_VALUE .. "Visible|r" or CastHistoryTracker.COLOR_VALUE .. "Hidden|r"))
 	end
 
+    local function printDirectionStatus(self)
+        DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_HEADER .. "[CastHistoryTracker] Frame Orientations:|r")
+        DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "Player:|r " .. CastHistoryTracker.COLOR_VALUE .. (self.frameOrientations["player"] or "right") .. "|r")
+        DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "Target:|r " .. CastHistoryTracker.COLOR_VALUE .. (self.frameOrientations["target"] or "right") .. "|r")
+        for i = 1, 4 do
+            local partyUnit = "party" .. i
+            DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. partyUnit .. ":|r " .. CastHistoryTracker.COLOR_VALUE .. (self.frameOrientations[partyUnit] or "right") .. "|r")
+        end
+        for i = 1, 5 do
+            local focusUnit = "focus" .. i
+            DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. focusUnit .. ":|r " .. CastHistoryTracker.COLOR_VALUE .. (self.frameOrientations[focusUnit] or "right") .. "|r")
+        end
+    end
+
     if table.getn(args) == 0 then
         printHelpMessage()
         return
@@ -83,15 +97,25 @@ SlashCmdList["CHT"] = function(msg)
     local cmd = args[1]
 
     if cmd == "size" then
-        if table.getn(args) == 2 then
+        if table.getn(args) == 1 then
+            CastHistoryTracker:HandleSizeCommand(nil, nil)
+        elseif table.getn(args) == 2 then
             CastHistoryTracker:HandleSizeCommand(nil, tonumber(args[2]))
         else
             CastHistoryTracker:HandleSizeCommand(args[2], tonumber(args[3]))
         end
     elseif cmd == "fade" then
-        CastHistoryTracker:HandleFadeCommand(tonumber(args[2]))
+        if table.getn(args) == 1 then
+            CastHistoryTracker:HandleFadeCommand(nil)
+        else
+            CastHistoryTracker:HandleFadeCommand(tonumber(args[2]))
+        end
     elseif cmd == "move" then
-        CastHistoryTracker:HandleMoveCommand(tonumber(args[2]))
+        if table.getn(args) == 1 then 
+            CastHistoryTracker:HandleMoveCommand(nil)
+        else
+            CastHistoryTracker:HandleMoveCommand(tonumber(args[2]))
+        end
     elseif cmd == "lock" then
         CastHistoryTracker:HandleLockCommand()
     elseif cmd == "focus" then
@@ -108,12 +132,12 @@ SlashCmdList["CHT"] = function(msg)
         end
     elseif cmd == "clear" then
         CastHistoryTracker:ClearAllFocusUnits()
-    elseif cmd == "reset" then
-        CastHistoryTracker:HandleResetCommand()
     elseif cmd == "debug" then
         CastHistoryTracker:ToggleDebugMode()
 	elseif cmd == "show" then
-		if args[2] then
+		if table.getn(args) == 1 then
+			printShowStatus(CastHistoryTracker)
+        elseif args[2] then
 			local unit = args[2]
 			if unit == "player" or unit == "target" or unit == "party" then
 				CastHistoryTracker:HandleShowCommand(unit)
@@ -122,6 +146,61 @@ SlashCmdList["CHT"] = function(msg)
 			end
 		else
 			printShowStatus(CastHistoryTracker)
+		end
+	elseif cmd == "direction" then
+        if table.getn(args) == 1 then
+            printDirectionStatus(CastHistoryTracker)
+        elseif table.getn(args) >= 2 then
+			local unitArg1 = args[2]
+			local unitArg2 = args[3]
+			local direction = args[table.getn(args)]
+
+			local unit = unitArg1
+			local isGroupUnit = false
+
+			if unitArg1 == "party" or unitArg1 == "focus" then
+				if tonumber(unitArg2) then
+					unit = unitArg1 .. tonumber(unitArg2)
+					direction = args[4] 
+					 if not direction then
+						direction = unitArg2 
+						unit = unitArg1 .. "1"
+						direction = nil
+					end
+				else
+					isGroupUnit = true
+					direction = unitArg2
+				end
+			elseif table.getn(args) == 3 then
+				direction = unitArg2
+			elseif table.getn(args) == 2 then
+				direction = nil
+				unit = unitArg1
+			else
+				direction = args[table.getn(args)]
+			end
+
+
+			if direction then
+				if isGroupUnit then
+					local unitsToUpdate = {}
+					if unitArg1 == "party" then
+						unitsToUpdate = {"party1", "party2", "party3", "party4"}
+					elseif unitArg1 == "focus" then
+						unitsToUpdate = {"focus1", "focus2", "focus3", "focus4", "focus5"}
+					end
+					for _, groupUnit in ipairs(unitsToUpdate) do
+						CastHistoryTracker:HandleDirectionCommand(groupUnit, direction)
+					end
+				else
+					CastHistoryTracker:HandleDirectionCommand(unit, direction)
+				end
+			else
+				DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_ERROR .. "[CastHistoryTracker]: Usage: /cht direction <unit> <top/bottom/left/right>|r");
+				DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_ERROR .. "[CastHistoryTracker]: Valid units are: player, target, party, focus, party1-party4, focus1-focus5|r");
+			end
+		else
+			DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_ERROR .. "[CastHistoryTracker]: Usage: /cht direction <unit> <top/bottom/left/right>|r")
 		end
 	elseif cmd == "config" then
         if CastHistoryTrackerConfigFrame:IsShown() then
@@ -162,13 +241,14 @@ function CastHistoryTracker:HandleSizeCommand(target, value)
 
         DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "[CastHistoryTracker]: " .. CastHistoryTracker.COLOR_DESCRIPTION .. "All frame sizes set to " .. CastHistoryTracker.COLOR_VALUE .. tostring(size) .. "|r")
 
-        for unit, frames in pairs(CastHistoryTracker.frames) do
-            for i = table.getn(frames), 1, -1 do
-                local frameData = frames[i]
-                if frameData and frameData.frame and frameData.frame:GetScript("OnUpdate") then
-                    frameData.frame:Hide()
-                    frameData.frame:SetScript("OnUpdate", nil)
-                    self.Compost:Reclaim(frameData)
+        for unit in pairs(CastHistoryTracker.frames) do
+            local frames = self.frames[unit]
+            if frames then
+                for i = table.getn(frames), 1, -1 do
+                    local frameData = frames[i]
+                    if frameData and frameData.frame then
+                        self:CleanupFrame(frameData)
+                    end
                     table.remove(frames, i)
                 end
             end
@@ -222,16 +302,14 @@ function CastHistoryTracker:HandleSizeCommand(target, value)
             end
 
             for _, unit in pairs(updateUnits) do
-                local frames = CastHistoryTracker.frames[unit]
+                local frames = self.frames[unit]
                 if frames then
                     for i = table.getn(frames), 1, -1 do
                         local frameData = frames[i]
-                        if frameData and frameData.frame and frameData.frame:GetScript("OnUpdate") then
-                            frameData.frame:Hide()
-                            frameData.frame:SetScript("OnUpdate", nil)
-                            self.Compost:Reclaim(frameData)
-                            table.remove(frames, i)
+                        if frameData and frameData.frame then
+                            self:CleanupFrame(frameData)
                         end
+                        table.remove(frames, i)
                     end
                 end
             end
@@ -287,33 +365,6 @@ function CastHistoryTracker:HandleShowCommand(unit)
 	self:UpdateTrackedUnitGUIDs()
 end
 
-
-----------------------------------------------------
--- New Command Handlers
-----------------------------------------------------
-
-function CastHistoryTracker:HandleResetCommand()
-    -- Handles the /cht reset command to reset anchor positions to default.
-    local defaultPositions = {
-        player = { x = UIParent:GetWidth() / 2, y = UIParent:GetHeight() / 2 - 150 },
-        target = { x = TargetFrame:GetRight() + 10, y = TargetFrame:GetTop() - (TargetFrame:GetHeight()/2) },
-        party1 = { x = PartyMemberFrame1:GetRight() + 50, y = PartyMemberFrame1:GetTop() - (PartyMemberFrame1:GetHeight()/2) },
-        party2 = { x = PartyMemberFrame2:GetRight() + 50, y = UIParent:GetHeight() / 2 - 150 },
-        party3 = { x = PartyMemberFrame3:GetRight() + 50, y = UIParent:GetHeight() / 2 - 150 },
-        party4 = { x = PartyMemberFrame4:GetRight() + 50, y = UIParent:GetHeight() / 2 - 150 },
-        focus1  = { x = UIParent:GetWidth() - 350, y = UIParent:GetHeight() - 300 },
-        focus2 = { x = UIParent:GetWidth() - 350, y = UIParent:GetHeight() - 370 },
-        focus3 = { x = UIParent:GetWidth() - 350, y = UIParent:GetHeight() - 440 },
-        focus4 = { x = UIParent:GetWidth() - 350, y = UIParent:GetHeight() - 510 },
-        focus5 = { x = UIParent:GetWidth() - 350, y = UIParent:GetHeight() - 580 }
-    }
-
-    for unit, defaultPos in pairs(defaultPositions) do
-        self.db.profile.anchorPositions[unit] = defaultPos
-        if CastHistoryTracker.anchorFrames[unit] then
-            CastHistoryTracker.anchorFrames[unit]:SetPoint("CENTER", UIParent, "BOTTOMLEFT", defaultPos.x, defaultPos.y)
-        end
-    end
-
-    DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "[CastHistoryTracker] " .. CastHistoryTracker.COLOR_DESCRIPTION .. "Anchor positions reset.|r")
+function CastHistoryTracker:HandleDirectionCommand(unit, direction)
+    CastHistoryTracker:SetFrameOrientation(unit, direction)
 end

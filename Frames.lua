@@ -24,17 +24,35 @@ function CastHistoryTracker:CreateSpellFrame(icon, unit)
 
     self:Debug(CastHistoryTracker.COLOR_COMMAND .. "[CastHistoryTracker]: Creating frame for " .. unit)
 
-    -- Shift existing frames to the right
+    -- Get frame orientation for the unit
+    local orientation = self.frameOrientations[unit] or "right"
+
+    -- Shift existing frames based on orientation
     local activeFrames = table.getn(frames)
     local shiftAmount  = math.min(activeFrames, CastHistoryTracker.MAX_FRAMES - 1)
+    local frameSize = self:GetFrameSize(unit)
+    local frameSpacing = 5
 
     for i = activeFrames, 1, -1 do
         local frameData = frames[i]
-        frameData.targetOffsetX = (i) * (self:GetFrameSize(unit) + 5)
+        if orientation == "right" then
+            frameData.targetOffsetX = (i) * (frameSize + frameSpacing)
+            frameData.targetOffsetY = 0
+        elseif orientation == "left" then
+            frameData.targetOffsetX = -(i) * (frameSize + frameSpacing)
+            frameData.targetOffsetY = 0
+        elseif orientation == "top" then
+            frameData.targetOffsetX = 0
+            frameData.targetOffsetY = (i) * (frameSize + frameSpacing)
+        elseif orientation == "bottom" then
+            frameData.targetOffsetX = 0
+            frameData.targetOffsetY = -(i) * (frameSize + frameSpacing)
+        end
         frameData.startTime   = GetTime()
         frameData.moveDuration = self.moveDurationCache
         frameData.frame:SetFrameStrata("MEDIUM")
     end
+
 
     -- Get a frame from the pool or create a new one
     local frame = table.remove(CastHistoryTracker.framePool) -- Try to get from pool
@@ -70,14 +88,16 @@ function CastHistoryTracker:CreateSpellFrame(icon, unit)
     frameData.startTime     = GetTime()
     frameData.moveDuration  = self.moveDurationCache
     frameData.targetOffsetX = 0
+    frameData.targetOffsetY = 0
     frameData.currentOffsetX = 0
+    frameData.currentOffsetY = 0
     frameData.unit = unit
     frameData.frame = frame
 
     -- Insert the new frameData at the beginning of the frames table
     table.insert(frames, 1, frameData)
 
-	-- Add to active frames if OnUpdate isn't already running
+    -- Add to active frames if OnUpdate isn't already running
     if not CastHistoryTracker.isUpdatingFrames then
       CastHistoryTracker:StartUpdatingFrames()
     end
@@ -154,9 +174,13 @@ function CastHistoryTracker:UpdateFrames(elapsed)
                     if not frameData.startTime then frameData.startTime = now end
                     local progress = (now - frameData.startTime) / frameData.moveDuration
                     if progress < 1 then
+                        -- Calculate deltaX and deltaY based on target offsets
                         local deltaX = (frameData.targetOffsetX - frameData.currentOffsetX) * progress
+                        local deltaY = (frameData.targetOffsetY - frameData.currentOffsetY) * progress
                         frameData.currentOffsetX = frameData.currentOffsetX + deltaX
-                        frameData.frame:SetPoint("CENTER", "CastHistoryTrackerAnchor"..frameData.unit, "CENTER", frameData.currentOffsetX, 0)
+                        frameData.currentOffsetY = frameData.currentOffsetY + deltaY
+                        -- Use both currentOffsetX and currentOffsetY for positioning
+                        frameData.frame:SetPoint("CENTER", "CastHistoryTrackerAnchor"..frameData.unit, "CENTER", frameData.currentOffsetX, frameData.currentOffsetY)
                     end
 
                     -- Fade Animation
@@ -170,15 +194,15 @@ function CastHistoryTracker:UpdateFrames(elapsed)
                        table.remove(frames,i)
                     end
                 else
-					-- Just in case
-					if frameData.isFaded then
-						self:CleanupFrame(frameData)
-						table.remove(frames, i)
-					end
+                    -- Just in case
+                    if frameData.isFaded then
+                        self:CleanupFrame(frameData)
+                        table.remove(frames, i)
+                    end
                 end
             else
-				-- If frameData or frameData.frame is nil remove from table
-				table.remove(frames, i)
+                -- If frameData or frameData.frame is nil remove from table
+                table.remove(frames, i)
             end
             i = i - 1
         end

@@ -34,6 +34,16 @@ function CastHistoryTracker:OnCastEvent(casterGUID, targetGUID, eventType, spell
     local spellName, _, spellIcon = SpellInfo(spellID)
     if not spellIcon then return end
 
+    -- Custom Icon Lookup
+    local customIcon = CastHistoryTracker.customSpellIcons[spellID]
+    if not customIcon then
+        customIcon = CastHistoryTracker.customSpellIcons[spellName]
+    end
+
+    if customIcon then
+        spellIcon = customIcon
+    end
+
     -- Determine units to display for this caster GUID
     local unitsToDisplay = {}
     for unit, guid in pairs(CastHistoryTracker.trackedUnitGUIDs) do
@@ -48,7 +58,7 @@ function CastHistoryTracker:OnCastEvent(casterGUID, targetGUID, eventType, spell
 
     -- Apply filtering based on current filter mode
     if CastHistoryTracker.currentFilterMode == "Simple" then
-        -- Simple Mode Filtering (No changes needed here, it's already efficient)
+        -- Simple Mode Filtering
         local filterType = self.db.profile.filterTypeList
         local filterList = CastHistoryTracker.activeSimpleSpellFilters
 
@@ -89,7 +99,7 @@ function CastHistoryTracker:OnCastEvent(casterGUID, targetGUID, eventType, spell
 
         for _, unit in ipairs(unitsToDisplay) do
             local activeFilterTable
-            local filterType  -- Declare filterType here
+            local filterType
 
             if unit == "player" then
                 activeFilterTable = CastHistoryTracker.activeAdvancedPlayerFilters
@@ -106,14 +116,13 @@ function CastHistoryTracker:OnCastEvent(casterGUID, targetGUID, eventType, spell
             end
 
             if activeFilterTable then
-
                 if filterType == "Whitelist" then
                     if activeFilterTable[spellID] or activeFilterTable[spellName] then
                         CastHistoryTracker:CreateSpellFrame(spellIcon, unit)
                         frameCreated = true
                     end
                 elseif filterType == "Blacklist" then
-                    if not activeFilterTable[spellID] and not activeFilterTable[spellName] then -- Using optimized AND
+                    if not activeFilterTable[spellID] and not activeFilterTable[spellName] then
                         CastHistoryTracker:CreateSpellFrame(spellIcon, unit)
                         frameCreated = true
                     end

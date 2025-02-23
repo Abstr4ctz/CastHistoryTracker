@@ -509,3 +509,113 @@ function CastHistoryTracker:LoadActiveFiltersForAdvancedMode()
         self:LoadAdvancedFilterListForUnit(unit)
     end
 end
+
+
+----------------------------------------------------
+-- Custom Spell Icons
+----------------------------------------------------
+
+function CastHistoryTracker:LoadCustomSpellIcons()
+    -- Loads custom spell icons from the database profile into the in-memory table.
+    CastHistoryTracker.customSpellIcons = {} -- Clear existing table
+    for spellKey, texturePath in pairs(self.db.profile.customSpellIcons) do
+        CastHistoryTracker.customSpellIcons[spellKey] = texturePath
+    end
+    self:Debug(self.COLOR_DEBUG .. "[OnEnable]: Loaded Custom Spell Icons: " .. self:TableToString(CastHistoryTracker.customSpellIcons))
+end
+
+
+function CastHistoryTracker:HandleCustomIconInputEnterPressed()
+    local iconName = self.CustomIconInput:GetText()
+    local selectedSpell = self.selectedSpellForCustomIcon
+
+    if not selectedSpell then
+        DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_ERROR .. "[CastHistoryTracker]: No spell selected to assign custom icon.|r")
+        return
+    end
+
+    if not iconName or iconName == "" or iconName == "Enter exact Icon Name" then
+        DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_ERROR .. "[CastHistoryTracker]: Icon Name cannot be empty.|r")
+        return
+    end
+
+    local iconFullPath = iconName
+    local texturePath = "Interface\\Icons\\" .. iconName
+
+    if not self:DoesIconExist(iconName) then
+        DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_ERROR .. "[CastHistoryTracker]: Icon '" .. CastHistoryTracker.COLOR_VALUE .. iconFullPath .. CastHistoryTracker.COLOR_ERROR .. "' does not exist in 'Interface\\Icons\\'.|r")
+        return
+    end
+
+    local spellKey = selectedSpell.spellID or selectedSpell.spellName
+    self.db.profile.customSpellIcons[spellKey] = texturePath
+    CastHistoryTracker.customSpellIcons[spellKey] = texturePath
+    self:Debug(self.COLOR_DEBUG .. "[CustomIconInput]: Set custom icon for " .. spellKey .. " to " .. texturePath)
+    DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "[CastHistoryTracker]: Set custom icon " .. CastHistoryTracker.COLOR_VALUE .. iconFullPath .. CastHistoryTracker.COLOR_COMMAND .. " for spell " .. CastHistoryTracker.COLOR_VALUE .. (selectedSpell.spellName or selectedSpell.spellID) .. "|r")
+
+    CastHistoryTracker:RefreshFilterList()
+    CastHistoryTracker:RefreshSpellList()
+
+    -- Re-select and *then* update selectedSpellForCustomIcon.
+    if CastHistoryTracker.selectedRow then
+        CastHistoryTracker:ReSelectSpellRow(selectedSpell, "selectedRow")
+    elseif CastHistoryTracker.selectedFilterRow then
+        CastHistoryTracker:ReSelectSpellRow(selectedSpell, "selectedFilterRow")
+        -- Crucial: Update selectedSpellForCustomIcon *after* re-selection.
+        self.selectedSpellForCustomIcon = { spellName = self.selectedFilterRow.spellName, spellID = self.selectedFilterRow.spellID }
+    end
+end
+
+
+function CastHistoryTracker:DoesIconExist(iconName)
+    -- Checks if an icon texture exists at the given path.
+    local testFrame = CreateFrame("Frame")
+    local testTexture = testFrame:CreateTexture()
+
+    testTexture:SetTexture("Interface\\Icons\\" .. iconName)
+
+    return testTexture:GetTexture() ~= nil -- Returns true if texture is valid, false otherwise
+end
+
+----------------------------------------------------
+-- Frame Orientation Functions
+----------------------------------------------------
+
+function CastHistoryTracker:LoadFrameOrientations()
+    -- Loads frame orientations from the database into the cache.
+    for _, unit in pairs(self.TRACKED_UNITS) do
+        self.frameOrientations[unit] = self.db.profile.frameOrientations[unit] or "right"
+        self:Debug("[LoadFrameOrientations] Loaded orientation for " .. unit .. ": " .. self.frameOrientations[unit])
+    end
+end
+
+function CastHistoryTracker:SetFrameOrientation(unit, direction)
+    -- Sets the frame orientation for a given unit, updates the DB and cache.
+
+    if not self.VALID_DIRECTIONS[direction] then
+        DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_ERROR .. "[CastHistoryTracker]: Invalid direction.  Use top, bottom, left, or right.|r")
+        return
+    end
+
+    if not self.trackedUnitGUIDs[unit] and not (unit == "player" or unit == "target" or string.find(unit, "party") or string.find(unit, "focus")) then
+        DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_ERROR .. "[CastHistoryTracker]: Invalid unit: " .. tostring(unit) .. "|r")
+        return
+    end
+	
+    self.db.profile.frameOrientations[unit] = direction
+    self.frameOrientations[unit] = direction
+    DEFAULT_CHAT_FRAME:AddMessage(CastHistoryTracker.COLOR_COMMAND .. "[CastHistoryTracker]: Frame orientation for " .. CastHistoryTracker.COLOR_VALUE .. unit .. CastHistoryTracker.COLOR_COMMAND .. " set to " .. CastHistoryTracker.COLOR_VALUE .. direction .. "|r")
+    self:Debug("[SetFrameOrientation] Set orientation for " .. unit .. " to " .. direction)
+
+    local frames = self.frames[unit]
+    if frames then
+        for i = table.getn(frames), 1, -1 do
+            local frameData = frames[i]
+            if frameData and frameData.frame then
+                self:CleanupFrame(frameData)
+            end
+            table.remove(frames, i)
+        end
+    end
+
+end

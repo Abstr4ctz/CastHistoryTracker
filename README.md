@@ -102,3 +102,93 @@ For users who prefer command-line interaction, CastHistoryTracker provides the f
 
 🎮 **Cast smarter. Play better. Dominate the battlefield.** ⚔️
 
+---
+
+# CastHistoryTracker User Guide
+
+## I. Using Slash Commands
+
+Slash commands allow you to adjust settings directly in the chat window. Type `/cht` followed by a command and its parameters, and press **Enter**.
+
+### `/cht`
+**Purpose:** Displays a list of all available slash commands and their descriptions in the chat window.
+
+### `/cht debug`
+**Purpose:** Toggles Debug Mode on or off.
+- **Usage:** `/cht debug`
+- **Functionality:** When enabled, the addon will print debug messages in your chat window.
+
+### `/cht size <player|target|party|focus|all> <number>`
+**Purpose:** Sets the size of the spell icon frames.
+- **Usage:**
+  - `/cht size player 50` (sets player frame size to 50)
+  - `/cht size all 45` (sets all frame sizes to 45)
+- **Valid Range:** 10 to 100.
+
+### `/cht fade <number>`
+**Purpose:** Sets the fade-out time for spell icons in seconds.
+- **Usage:** `/cht fade 3`
+- **Valid Range:** 1 to 10 seconds.
+
+### `/cht move <number>`
+**Purpose:** Sets the duration of the frame movement animation in seconds.
+- **Usage:** `/cht move 0.5`
+- **Valid Range:** 0.1 to 1.0 seconds.
+
+### `/cht lock`
+**Purpose:** Toggles anchor frame locking on or off.
+- **Usage:** `/cht lock`
+
+### `/cht focus <1-5>`
+**Purpose:** Sets a unit as a focus target.
+- **Usage:** `/cht focus 1` (sets targeted unit as `focus1`)
+- **Clear focus:** `/cht focus 1` without targeting any unit
+- **Clear all focus targets:** `/cht clear`
+
+### `/cht clear`
+**Purpose:** Clears all set focus targets (focus1 to focus5).
+- **Usage:** `/cht clear`
+
+### `/cht show <player|target|party>`
+**Purpose:** Toggles the visibility of cast history frames.
+- **Usage:** `/cht show player` (toggles player frame visibility)
+
+### `/cht direction <unit> <top|bottom|left|right>`
+**Purpose:** Sets the orientation of spell history frames. Unit can be player|target|party|focus or party(1-4)|focus(1-5).
+- **Usage:** `/cht direction player top`
+- **Valid Directions:** top, bottom, left, right.
+
+### `/cht config`
+**Purpose:** Shows or hides the Configuration GUI.
+- **Usage:** `/cht config`
+
+## II. Using the Configuration GUI
+
+To open the Configuration GUI, type `/cht config`. The GUI provides a visual way to manage filters and customize the addon.
+Keep in mind that only spells not filtered by the addon show in the "Last Seen Spells" window.
+
+### **Filter Modes**
+- **Simple Mode:** A single global filter list (blacklist or whitelist) for all units.
+- **Advanced Mode:** Separate filter lists for each unit type (player, target, party, focus).
+
+### **Filter Type Selection**
+- **Blacklist:** Spells on the list are hidden.
+- **Whitelist:** Only spells on the list are shown.
+
+### **Filter List Management**
+- **Last Seen Spells:** A scrollable list of recently detected (not filtered) spells.
+- **Active Filter List:** The current filter list in Simple or Advanced mode.
+- **Custom Icons List:** Assign custom icons to spells.
+
+#### **Adding and Removing Spells**
+- Select a spell in the "Last Seen Spells" list.
+- Click **ADD** to move it to the Active Filter List.
+- To remove a spell, select it in the "Active Filter List" and click **REMOVE**.
+
+#### **Assigning Custom Icons**
+- Select a spell.
+- Enter the icon filename (e.g., `INV_Potion_01`) in the input field.
+- Press **Enter** to assign the custom icon.
+
+### **Closing the Configuration GUI**
+- Click the **X** button in the top-right corner.
